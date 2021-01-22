@@ -1,5 +1,5 @@
-# Tutorial on finding the best fit line
-# Dmitrii Khizbullin, 2021
+# Нахождение прямой, проходящей через набор точек
+# Дмитрий Хизбуллин, 2021
 
 import math
 import numpy as np
@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 
 def generate_points(axis: Optional[Any] = None) -> np.ndarray:
     """
-    Function to generate an array of points approximately lying on
-    on a segment of a straight line.
+    Функция, генерирующая массив точек, приблизительно лежащих на
+    отрезке прямой.
 
-    :param axis: Collection of axis objects to plot onto
-    :return: Numpy array of shape [N, 2] of points on a straight line
+    :param axis: Набор осей, на которых рисовать график
+    :return: Numpy массив формы [N, 2] точек на прямой
     """
 
-    # Let's generate 10 points laying on a straight line
+    # Давайте сгенерируем 10 точек, лежащих на прямой
     num_points = 10
     p_initial = np.array((-2, 3))
     speed = 1.0
@@ -26,13 +26,13 @@ def generate_points(axis: Optional[Any] = None) -> np.ndarray:
                                  math.sin(angle_radians)))
     ideal_points = np.expand_dims(p_initial, 0) + \
                    np.outer(np.arange(0, num_points), velocity)
-    # and add some noise to points to simulate real measurements
+    # и добавим немного шума, чтобы промоделировать реальные измерения
     noise = 0.1 * np.random.randn(num_points, 2)
     points = ideal_points + noise
 
     if axis is not None:
         for ax in axis:
-            ax.set_title("Input point set")
+            ax.set_title("Входной набор точек")
             ax.plot(points[:, 0], points[:, 1], 'or')
             ax.grid(True, linestyle='--')
             ax.axis('equal')
@@ -40,39 +40,39 @@ def generate_points(axis: Optional[Any] = None) -> np.ndarray:
     return points
 
 
-def least_squares(points: np.ndarray, axis: Optional[Any] = None) -> np.ndarray:
+def least_squares(points: np.ndarray, axis: Optional[Any] = None) \
+        -> np.ndarray:
     """
-    Function to approximate a set of points by a straight line
-    using least squares method.
+    Функция для аппроксимации массива точек прямой, основанная на
+    методе наименьших квадратов.
 
-    :param points: an input array of points of shape [N, 2]
-    :param axis: Collection of axis objects to plot onto
-    :return: Numpy array of shape [N, 2] of points on a straight line
+    :param points: Входной массив точек формы [N, 2]
+    :param axis: Набор осей, на которых рисовать график
+    :return: Numpy массив формы [N, 2] точек на прямой
     """
 
     x = points[:, 0]
     y = points[:, 1]
-    # For least squares method we need X to be a matrix containing
-    # 1-s in the first column and x-s in the second
+    # Для метода наименьших квадратов нам нужно, чтобы X был матрицей,
+    # в которой первый столбей - единицы, а второй - x координаты точек
     X = np.vstack((np.ones(x.shape[0]), x)).T
-    # We compute normal matrix and moment matrix as a part of
-    # formula to compute intercept and slope
     normal_matrix = np.dot(X.T, X)
     moment_matrix = np.dot(X.T, y)
-    # beta_hat is a vector [intercept, slope], we need to invert
-    # the normal matrix and compute cross product with the moment matrix
+    # beta_hat это вектор [перехват, наклон], рассчитываем его в
+    # в соответствии с формулой.
     beta_hat = np.dot(np.linalg.inv(normal_matrix), moment_matrix)
     intercept = beta_hat[0]
     slope = beta_hat[1]
-    # Now when we know the parameters of the line, computing
-    # y coordinates is straightforward
+    # Теперь, когда мы знаем параметры прямой, мы можем
+    # легко вычислить y координаты точек на прямой.
     y_hat = intercept + slope * x
-    # Let's combine x and y into a single matrix that we want to return
+    # Соберем x и y в единую матрицу, которую мы собираемся вернуть
+    # в качестве результата.
     points_hat = np.vstack((x, y_hat)).T
 
     if axis is not None:
         for ax in axis:
-            ax.set_title("Least squares")
+            ax.set_title("Метод наименьших квадратов")
             ax.plot(x, y, 'or')
             ax.plot(x, y_hat, 'o-', mfc='none')
             ax.grid(True, linestyle='--')
@@ -88,56 +88,63 @@ def ransac(points: np.ndarray,
            probability_of_success: float = 0.99,
            axis: Optional[Any] = None) -> Optional[np.ndarray]:
     """
-    RANdom SAmple Consensus method of finding the best fit line.
+    RANdom SAmple Consensus метод нахождения наилучшей
+    аппроксимирующей прямой.
 
-    :param points: an input array of points of shape [N, 2]
-    :param min_inliers: Minimum number of inliers to consider a support
-    :param max_distance: Maximum distance from a support line
-                         for a point to be considered as an inlier
-    :param outliers_fraction: As estimated fraction of outliers
-    :param probability_of_success: desired probability that the support
-                                   does not contain outliers
-    :param axis: Collection of axis objects to plot onto
-    :return: Numpy array of shape [N, 2] of points on a straight line
+    :param points: Входой массив точек формы [N, 2]
+    :param min_inliers: Минимальное количество не-выбросов
+    :param max_distance: максимальное расстояние до поддерживающей прямой,
+                         чтобы точка считалась не-выбросом
+    :param outliers_fraction: Ожидаемая доля выбросов
+    :param probability_of_success: желаемая вероятность, что поддерживающая
+                                   прямая не основана на точке-выбросе
+    :param axis: Набор осей, на которых рисовать график
+    :return: Numpy массив формы [N, 2] точек на прямой,
+             None, если ответ не найден.
     """
 
-    # Let's calculate the required number of trials to sample a support
+    # Давайте вычислим необходимое количество итераций
     num_trials = int(math.log(1 - probability_of_success) /
                      math.log(1 - outliers_fraction**2))
 
     best_num_inliers = 0
     best_support = None
     for _ in range(num_trials):
-        # For each trial, randomly sample 2 different points
-        # from the input array to form the support
+        # В каждой итерации случайным образом выбираем две точки
+        # из входного массива и называем их "суппорт"
         random_indices = np.random.choice(
             np.arange(0, len(points)), size=(2,), replace=False)
         assert random_indices[0] != random_indices[1]
         support = np.take(points, random_indices, axis=0)
 
-        # Here we compute distances from all points to the line
-        # defined by the support. Distances are nicely computed
-        # with cross product function.
+        # Здесь мы считаем расстояния от всех точек до прямой
+        # заданной суппортом. Для расчета расстояний от точки до
+        # прямой подходит функция векторного произведения.
+        # Особенность np.cross в том, что функция возвращает только
+        # z координату векторного произведения, а она-то нам и нужна.
         cross_prod = np.cross(support[1, :] - support[0, :],
                               support[1, :] - points)
         support_length = np.linalg.norm(support[1, :] - support[0, :])
-        # cross_prod contains signed distances thus we need modulus
+        # cross_prod содержит знаковое расстояние, поэтому нам нужно
+        # взять модуль значений.
         distances = np.abs(cross_prod) / support_length
 
-        # Inliers are all the points that are close enough
-        # to the support line
+        # Не-выбросы - это все точки, которые ближе, чем max_distance
+        # к нашей прямой-кандидату.
         num_inliers = np.sum(distances < max_distance)
-        # Here we update the support with the better one
+        # Здесь мы обновляем лучший найденный суппорт
         if num_inliers >= min_inliers and num_inliers > best_num_inliers:
             best_num_inliers = num_inliers
             best_support = support
 
-    # If we succeeded to find a good support
+    # Если мы успешно нашли хотя бы один суппорт,
+    # удовлетворяющий всем требованиям
     if best_support is not None:
-        # Let's project all points onto the support line
+        # Спроецируем точки из входного массива на найденную прямую
         support_start = best_support[0]
         support_vec = best_support[1] - best_support[0]
-        # Dot product is the right function to compute projections
+        # Для расчета проекций отлично подходит функция
+        # скалярного произведения.
         offsets = np.dot(support_vec, (points - support_start).T)
         proj_vectors = np.outer(support_vec, offsets).T
         support_sq_len = np.inner(support_vec, support_vec)
@@ -162,37 +169,42 @@ def ransac(points: np.ndarray,
 
 def pca(points: np.ndarray, axis: Optional[Any] = None) -> np.ndarray:
     """
-    Principal Component Analysis (PCA) method to estimate the direction
-    of the maximal variance of a point set.
 
-    :param points: an input array of points of shape [N, 2]
-    :param axis: Collection of axis objects to plot onto
-    :return: Numpy array of shape [N, 2] of points on a straight line
+    Метод главных компонент (PCA) оценки направления
+    максимальной досперсии облака точек.
+
+    :param points: Входой массив точек формы [N, 2]
+    :param axis: Набор осей, на которых рисовать график
+    :return: Numpy массив формы [N, 2] точек на прямой
     """
 
-    # Perform PCA to understand what the primary axis
-    # of the given point set is
+    # Найдем главные компоненты.
+    # В первую очередь нужно центрировать облако точек, вычтя среднее
     mean = np.mean(points, axis=0)
-    # Points have to be zero-mean
     centered = points - mean
-    # np.linalg.eig takes a covariance matrix as an argument
+    # Функция вычисления собственных значений и векторов np.linalg.eig
+    # требует ковариационную матрицу в качестве аргумента.
     cov = np.cov(centered.T)
-    # Call eigenvector decomposition to obtain principal components
+    # Теперь мы можем посчитать главные компоненты, заданные
+    # собственными значениями и собственными векторами.
     eigenval, eigenvec = np.linalg.eig(cov)
-    # We want to parametrize target straight line
-    # in the coordinate frame given by the eigenvector
-    # that corresponds to the biggest eigenvalue
+    # Мы хотим параметризовать целевую прямую в координатной системе,
+    # заданной собственным вектором, собственное значение которого
+    # наиболее велико (направление наибольшей вариативности).
     argmax_eigen = np.argmax(eigenval)
-    # We'll need projections of data points
-    # on the primary axis
+    # Нам понадобятся проекции входных точек на наибольший собственный
+    # вектор.
     loc_pca = np.dot(centered, eigenvec)
     loc_maxeigen = loc_pca[:, argmax_eigen]
     max_eigenval = eigenval[argmax_eigen]
     max_eigenvec = eigenvec[:, argmax_eigen]
-    # Re-parametrize the line
+    # Ре-параметризуем прямую, взяв за начало отрезка проекции
+    # первой и последней точки на прямую.
     loc_start = mean + max_eigenvec * loc_maxeigen[0]
     loc_final = mean + max_eigenvec * loc_maxeigen[-1]
     linspace = np.linspace(0, 1, num=len(points))
+    # Получаем позиции точек, которые идут с одинаковым интервалом,
+    # таким образом удаляя шум измерений и вдоль траектории движения.
     positions = loc_start + np.outer(linspace, loc_final - loc_start)
 
     if axis is not None:

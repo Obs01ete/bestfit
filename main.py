@@ -117,7 +117,9 @@ def ransac(points: np.ndarray,
 
         # Here we compute distances from all points to the line
         # defined by the support. Distances are nicely computed
-        # with cross product function.
+        # with cross product function. A peculiarity of np.cross
+        # is that it returns z coordinate of the cross product -
+        # exactly what we need to compute the distance.
         cross_prod = np.cross(support[1, :] - support[0, :],
                               support[1, :] - points)
         support_length = np.linalg.norm(support[1, :] - support[0, :])
