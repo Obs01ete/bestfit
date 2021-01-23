@@ -54,7 +54,7 @@ def least_squares(points: np.ndarray, axis: Optional[Any] = None) \
     x = points[:, 0]
     y = points[:, 1]
     # Для метода наименьших квадратов нам нужно, чтобы X был матрицей,
-    # в которой первый столбей - единицы, а второй - x координаты точек
+    # в которой первый столбец - единицы, а второй - x координаты точек
     X = np.vstack((np.ones(x.shape[0]), x)).T
     normal_matrix = np.dot(X.T, X)
     moment_matrix = np.dot(X.T, y)
@@ -91,7 +91,7 @@ def ransac(points: np.ndarray,
     RANdom SAmple Consensus метод нахождения наилучшей
     аппроксимирующей прямой.
 
-    :param points: Входой массив точек формы [N, 2]
+    :param points: Входной массив точек формы [N, 2]
     :param min_inliers: Минимальное количество не-выбросов
     :param max_distance: максимальное расстояние до поддерживающей прямой,
                          чтобы точка считалась не-выбросом
@@ -169,11 +169,10 @@ def ransac(points: np.ndarray,
 
 def pca(points: np.ndarray, axis: Optional[Any] = None) -> np.ndarray:
     """
-
     Метод главных компонент (PCA) оценки направления
-    максимальной досперсии облака точек.
+    максимальной дисперсии облака точек.
 
-    :param points: Входой массив точек формы [N, 2]
+    :param points: Входной массив точек формы [N, 2]
     :param axis: Набор осей, на которых рисовать график
     :return: Numpy массив формы [N, 2] точек на прямой
     """
